@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ubicación de prueba</title>
+  <script>
+    function mostrarMensajeError(mensaje) {
+      document.body.innerHTML = `
+        <h2 style="color:red;">Error al obtener ubicación</h2>
+        <p>${mensaje}</p>
+        <p>Activá el GPS, permití el acceso y recargá la página.</p>
+      `;
+    }
+
+    async function convertirUTM(lat, lon) {
+      try {
+        const response = await fetch(`https://epsg.io/trans?x=${lon}&y=${lat}&s_srs=4326&t_srs=32616`);
+        const data = await response.json();
+        return `Este: ${data.x}, Norte: ${data.y}, Zona: 16N`;
+      } catch (e) {
+        return "UTM no disponible";
+      }
+    }
+
+    window.onload = function () {
+      const soporte = navigator.geolocation ? "Soporta geolocalización ✅" : "No soporta geolocalización ❌";
+      document.body.innerHTML += `<p>${soporte}</p>`;
+
+      if (!navigator.geolocation) {
+        mostrarMensajeError("Tu navegador no soporta geolocalización.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async function (position) {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          document.body.innerHTML += `<p>Lat: ${lat}, Lon: ${lon}</p>`;
+
+          const utm = await convertirUTM(lat, lon);
+          const mensaje = `Coordenadas GPS:\nLatitud: ${lat}\nLongitud: ${lon}\nUTM: ${utm}`;
+          const whatsappUrl = `https://wa.me/50582397290?text=${encodeURIComponent(mensaje)}`;
+
+          document.body.innerHTML += `<p>Redirigiendo a WhatsApp...</p>`;
+          window.location.href = whatsappUrl;
+        },
+        function (error) {
+          let mensaje = "Error desconocido.";
+          if (error.code === 1) mensaje = "Permiso de ubicación denegado.";
+          else if (error.code === 2) mensaje = "Ubicación no disponible.";
+          else if (error.code === 3) mensaje = "La solicitud de ubicación expiró.";
+          mostrarMensajeError(mensaje + ` (Código: ${error.code})`);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    };
+  </script>
+</head>
+<body>
+  <h2>Obteniendo tu ubicación...</h2>
+  <p>Esperá unos segundos.</p>
+</body>
+</html>
+
